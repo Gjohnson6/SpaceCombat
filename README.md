@@ -10,6 +10,7 @@ This is a space combat game I'm making for fun in my free time.
 [![Day 3 Video](https://img.youtube.com/vi/lxB22fKSJNI/1.jpg)](https://www.youtube.com/watch?v=lxB22fKSJNI)
 [![Day 4 Video](https://img.youtube.com/vi/ru30-S4AJ9E/1.jpg)](https://www.youtube.com/watch?v=ru30-S4AJ9E)
 [![Day 5 Video](https://img.youtube.com/vi/2WkvvAsVyKk/1.jpg)](https://www.youtube.com/watch?v=2WkvvAsVyKk)
+[![Day 6 Video](https://img.youtube.com/vi/m7zrXVyuNAE/1.jpg)](https://www.youtube.com/watch?v=m7zrXVyuNAE)
 
 
 # Legal Info
