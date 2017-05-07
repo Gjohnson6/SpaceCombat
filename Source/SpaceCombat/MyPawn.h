@@ -2,6 +2,7 @@
 
 #pragma once
 
+#include "MovementVariablesStruct.h"
 #include "GameFramework/Pawn.h"
 #include "MyPawn.generated.h"
 
@@ -21,7 +22,7 @@ public:
 	virtual void Tick( float DeltaSeconds ) override;
 
 	// Called to bind functionality to input
-	virtual void SetupPlayerInputComponent(class UInputComponent* InputComponent) override;
+	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
 
 	//Passes the input axis for moving forwards and backwards to the pawn controller
 	void MoveForward(float AxisValue);

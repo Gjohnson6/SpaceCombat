@@ -27,7 +27,7 @@ void ABaseShipPawnC::Tick( float DeltaTime )
 }
 
 // Called to bind functionality to input
-void ABaseShipPawnC::SetupPlayerInputComponent(class UInputComponent* InputComponent)
+void ABaseShipPawnC::SetupPlayerInputComponent(UInputComponent* InputComponent)
 {
 	Super::SetupPlayerInputComponent(InputComponent);
 
