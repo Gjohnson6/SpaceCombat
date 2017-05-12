@@ -2,14 +2,14 @@
 
 #pragma once
 
-#include "Engine/UserDefinedStruct.h"
-#include "WeaponTypeStruct.generated.h"
+#include "Engine/UserDefinedEnum.h"
+#include "WeaponTypeEnum.generated.h"
 
 /**
  * 
  */
 UCLASS()
-class SPACECOMBAT_API UWeaponTypeStruct : public UUserDefinedStruct
+class SPACECOMBAT_API UWeaponTypeEnum : public UUserDefinedEnum
 {
 	GENERATED_BODY()
 	
