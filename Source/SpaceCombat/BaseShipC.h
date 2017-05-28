@@ -9,10 +9,10 @@
 #include "BaseShipC.generated.h"
 
 UCLASS()
+
 class SPACECOMBAT_API ABaseShipC : public APawn
 {
 	GENERATED_BODY()
-
 public:
 	// Sets default values for this pawn's properties
 	ABaseShipC();
@@ -44,12 +44,15 @@ public:
 	//Adjust ship's yaw based on AxisValue, >0 turns right, <0 turns left
 	void Yaw(float AxisValue);
 
-	template<WeaponType WepType, bool IsPressed>
+	template <WeaponType WepType, bool IsPressed>
 	void WeaponTypePressed();
-	
+
 	//Handle Afterburner input
 	void AfterburnerPressed();
 	void AfterburnerReleased();
+
+	void AddToIgnoreArray(AActor* actorToAdd);
+	void RemoveFromIgnoreArray(AActor* actorToRemove);
 
 	//Handle taking damage
 	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
@@ -57,16 +60,21 @@ public:
 	virtual void Destroyed() override;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Movement")
-		FMovementVariablesStruct mv;
+	FMovementVariablesStruct MovementVariables;
 
 protected:
 	//Base mesh of the ship
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Default Mesh")
-		UStaticMeshComponent* RootMesh;
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Base Mesh")
+	UStaticMeshComponent* RootMesh;
 
 	//Controls movement
 	UPROPERTY(EditDefaultsOnly, Category = "Movement")
-		UFloatingPawnMovement* FloatingPawnMovementComponent;
+	UFloatingPawnMovement* MovementComponent;
+
+	//Array of actors to pass to weapons to be ignored by weapons and projectiles
+	//Includes the ship itself and projectiles fired
+	UPROPERTY(BlueprintReadOnly, Category = "Weapons")
+	TArray<AActor*> ActorsToIgnore;
 
 	//Health and Damage Variables
 	//Maximum health of the ship
@@ -74,19 +82,21 @@ protected:
 	//Current health of the ship
 	float CurrentHealth = MaxHealth;
 
-	bool PrimaryFiring = false;
-	bool SecondaryFiring = false;
-	bool MissileFiring = false;
-	bool AfterburnerHeld = false;
+	//Maps weapon types to bools to indicate whether that weapon type is supposed to be firing
 	TMap<WeaponType, bool> WeaponTypeFiringMap;
-	
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapons")
+	TArray<ABaseWeaponC*> EquippedWeapons;
+
+	bool AfterburnerHeld = false;
+
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Weapons")
-	TArray<UChildActorComponent*> Weapons;
+	//TArray<TPair<TSubclassOf<ABaseWeaponC>, FName>> WeaponLoadout;
+	TMap<FName, TSubclassOf<ABaseWeaponC>> WeaponLoadout;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Particles & Sounds")
 	TWeakObjectPtr<UParticleSystem> ExplosionParticle;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Particles & Sounds")
 	TWeakObjectPtr<USoundBase> ExplosionSound;
-
 };

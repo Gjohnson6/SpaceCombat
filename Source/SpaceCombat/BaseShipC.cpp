@@ -5,6 +5,7 @@
 #include "BaseShipC.h"
 #include <exception>
 
+#define ECC_Ship ECC_GameTraceChannel13
 
 ABaseShipC::ABaseShipC()
 {
@@ -13,25 +14,18 @@ ABaseShipC::ABaseShipC()
 
 	RootMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("RootComponent"));
 	RootComponent = RootMesh;
-	FloatingPawnMovementComponent = CreateDefaultSubobject<UFloatingPawnMovement>(TEXT("FloatingPawnMovement"));
-	FloatingPawnMovementComponent->UpdatedComponent = RootComponent;
-
-	ExplosionParticle = ConstructorHelpers::FObjectFinder<UParticleSystem>(
-		TEXT(
-			"ParticleSystem'/Game/StarterContent/Particles/P_Explosion.P_Explosion'"
-		)
-	).Object;
+	RootMesh->SetCollisionObjectType(ECC_Ship);
+	MovementComponent = CreateDefaultSubobject<UFloatingPawnMovement>(TEXT("FloatingPawnMovement"));
+	MovementComponent->UpdatedComponent = RootComponent;
 	
-	ExplosionSound = ConstructorHelpers::FObjectFinder<USoundBase>(
-		TEXT(
-			"SoundWave'/Game/StarterContent/Audio/Explosion02.Explosion02'"
-		)
-	).Object;
+	ExplosionParticle = ConstructorHelpers::FObjectFinder<UParticleSystem>(TEXT("ParticleSystem'/Game/Effects/P_Explosion_Large.P_Explosion_Large'")).Object;
 
-	WeaponTypeFiringMap[WeaponType::PrimaryWeapon] = false;
-	WeaponTypeFiringMap[WeaponType::SecondaryWeapon] = false;
-	WeaponTypeFiringMap[WeaponType::MissileWeapon] = false;
-	WeaponTypeFiringMap[WeaponType::AuxiliaryWeapon] = false;
+
+	WeaponTypeFiringMap.Add(WeaponType::PrimaryWeapon, false);
+	WeaponTypeFiringMap.Add(WeaponType::SecondaryWeapon, false);
+	WeaponTypeFiringMap.Add(WeaponType::MissileWeapon, false);
+	WeaponTypeFiringMap.Add(WeaponType::AuxiliaryWeapon, false);
+	ActorsToIgnore.Add(this);
 }
 
 // Called when the game starts or when spawned
@@ -39,6 +33,23 @@ void ABaseShipC::BeginPlay()
 {
 	Super::BeginPlay();
 
+	//When spawned, equip the weapon that corresponsd to each socket in WeaponLoadout
+	for(FName SocketName : RootComponent->GetAllSocketNames())
+	{
+		TSubclassOf<ABaseWeaponC>* Wep = WeaponLoadout.Find(SocketName);
+
+		if(Wep)
+		{
+			auto w = GetWorld()->SpawnActor(Cast<UClass>(*Wep));
+			EquippedWeapons.Add(Cast<ABaseWeaponC>(w));
+			w->AttachToComponent(
+				RootComponent,
+				FAttachmentTransformRules::SnapToTargetNotIncludingScale,
+				SocketName
+			);
+			w->SetOwner(this);
+		}
+	}
 }
 
 // Called every frame
@@ -46,40 +57,25 @@ void ABaseShipC::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	
-	//Get all children that have the "Weapon" tag
-	auto WeaponChildren = RootComponent->GetAttachChildren().FilterByPredicate(
-		[](const USceneComponent* c) 
-		{ 
-			return c->ComponentHasTag(TEXT("Weapon"));
-		}
-	);
-
-	//Iterate over all the weapon children
-	for (auto t : WeaponChildren)
+	if(GetWorld())
+	for(ABaseWeaponC* CurrWep : EquippedWeapons)
 	{
-		auto wep = t->GetAttachChildren();
-		//For each child (there should normally be only one), check if it's valid
-		//Then cast it to an ABaseWeaponC, check if it can fire and if the
-		//corresponding firing button is pressed. If both are true, fire the weapon
-		for (auto& w : wep)
+		if(CurrWep->IsValidLowLevel())
 		{
-			if (w->IsValidLowLevel())
+			if(WeaponTypeFiringMap[CurrWep->GetWeaponType()])
 			{
-				ABaseWeaponC* AsWeapon = Cast<ABaseWeaponC>(w->GetOwner());
-				WeaponType type = AsWeapon->GetWeaponType();
-				if (AsWeapon->CanFire() && WeaponTypeFiringMap[type])
-				{
-					AsWeapon->Fire();
-				}
+				CurrWep->TryFire();
 			}
+			//print(CurrWep->GetActorLocation().ToString());
 		}
-	}	
+	}
+
 }
 
 // Called to bind functionality to input
 void ABaseShipC::SetupPlayerInputComponent(UInputComponent* InputComponent)
 {
-	Super::SetupPlayerInputComponent(InputComponent);
+	APawn::SetupPlayerInputComponent(InputComponent);
 	check(InputComponent);
 
 	//Configure the input component to bind the input axes to this pawn's functions
@@ -94,7 +90,7 @@ void ABaseShipC::SetupPlayerInputComponent(UInputComponent* InputComponent)
 	InputComponent->BindAction("Fire", IE_Pressed, this, &ABaseShipC::WeaponTypePressed<WeaponType::PrimaryWeapon, true>);
 	InputComponent->BindAction("Fire", IE_Released, this, &ABaseShipC::WeaponTypePressed<WeaponType::PrimaryWeapon, false>);
 	InputComponent->BindAction("SecondaryFire", IE_Pressed, this, &ABaseShipC::WeaponTypePressed<WeaponType::SecondaryWeapon, true>);
-	InputComponent->BindAction("SecondaryFire", IE_Released, this, &ABaseShipC::WeaponTypePressed<WeaponType::PrimaryWeapon, false>);
+	InputComponent->BindAction("SecondaryFire", IE_Released, this, &ABaseShipC::WeaponTypePressed<WeaponType::SecondaryWeapon, false>);
 	InputComponent->BindAction("MissileFire", IE_Pressed, this, &ABaseShipC::WeaponTypePressed<WeaponType::MissileWeapon, true>);
 	InputComponent->BindAction("MissileFire", IE_Released, this, &ABaseShipC::WeaponTypePressed<WeaponType::MissileWeapon, false>);
 	InputComponent->BindAction("Afterburner", IE_Pressed, this, &ABaseShipC::AfterburnerPressed);
@@ -121,7 +117,7 @@ void ABaseShipC::RollRight(float AxisValue)
 {
 	if (AxisValue != 0)
 	{
-		AddActorLocalRotation(FRotator(0, 0, AxisValue * mv.RollSpeed));
+		AddActorLocalRotation(FRotator(0, 0, AxisValue * MovementVariables.RollSpeed));
 	}
 }
 
@@ -129,9 +125,9 @@ void ABaseShipC::Pitch(float AxisValue)
 {
 	if (AxisValue != 0)
 	{
-		if (!mv.FreeTurn)
+		if (!MovementVariables.FreeTurn)
 		{
-			FMath::Clamp(AxisValue, -mv.MaxPitchRadius, mv.MaxPitchRadius);
+			FMath::Clamp(AxisValue, -MovementVariables.MaxPitchRadius, MovementVariables.MaxPitchRadius);
 		}
 
 		AddActorLocalRotation(FRotator(AxisValue, 0, 0));
@@ -142,9 +138,9 @@ void ABaseShipC::Yaw(float AxisValue)
 {
 	if (AxisValue != 0)
 	{
-		if (!mv.FreeTurn)
+		if (!MovementVariables.FreeTurn)
 		{
-			FMath::Clamp(AxisValue, -mv.MaxYawRadius, mv.MaxYawRadius);
+			FMath::Clamp(AxisValue, -MovementVariables.MaxYawRadius, MovementVariables.MaxYawRadius);
 		}
 
 		AddActorLocalRotation(FRotator(0, AxisValue, 0));
@@ -165,6 +161,16 @@ void ABaseShipC::AfterburnerPressed()
 void ABaseShipC::AfterburnerReleased()
 {
 	AfterburnerHeld = false;
+}
+
+void ABaseShipC::AddToIgnoreArray(AActor* actorToAdd)
+{
+	ActorsToIgnore.Add(actorToAdd);
+}
+
+void ABaseShipC::RemoveFromIgnoreArray(AActor* actorToRemove)
+{
+	ActorsToIgnore.Remove(actorToRemove);
 }
 
 float ABaseShipC::TakeDamage(float DamageAmount, FDamageEvent const & DamageEvent, AController * EventInstigator, AActor * DamageCauser)
@@ -192,6 +198,10 @@ void ABaseShipC::Destroyed()
 		true
 	);
 	
-	UGameplayStatics::SpawnSoundAtLocation(GetWorld(), ExplosionSound.Get(), EmitterTransform.GetLocation());
+	UGameplayStatics::SpawnSoundAtLocation(
+		GetWorld(), 
+		ExplosionSound.Get(), 
+		EmitterTransform.GetLocation()
+	);
 }
 

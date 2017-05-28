@@ -15,7 +15,7 @@ AMyPawn::AMyPawn()
 	FloatingPawnMovementComponent = CreateDefaultSubobject<UFloatingPawnMovement>(TEXT("FloatingPawnMovement"));
 	FloatingPawnMovementComponent->UpdatedComponent = RootComponent;
 
-	//mv = FMovementVariablesStruct();
+	//MovementVariables = FMovementVariablesStruct();
 }
 
 // Called when the game starts or when spawned

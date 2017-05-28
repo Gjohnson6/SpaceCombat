@@ -36,46 +36,90 @@ public:
 	// Called every frame
 	virtual void Tick( float DeltaTime) override;
 
+	virtual void Init();
+
 	virtual void Fire();
+
+	virtual void TryFire();
 
 	virtual bool CanFire();
 
-	virtual void UpdateCooldown();
+	virtual void UpdateCooldown(float DeltaTime);
 
-	virtual bool TraceCamera(FVector& HitLocation, TWeakObjectPtr<AActor> HitActor);
+	virtual void UpdateCharge(float DeltaTime);
 
-	virtual void RotateWeapon(FVector TargetLocation);
+	virtual void SetCooldownToMax();
+
+	virtual bool TraceCamera();
+
+	virtual void RotateWeapon();
 
 	WeaponType GetWeaponType();
 
 protected:
 	//Base mesh of the Weapon
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Default Mesh")
-		UStaticMeshComponent* RootMesh;
+	UStaticMeshComponent* RootMesh;
 
 	//How much damage a single shot of the weapon deals
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon Stats")
-	float damage = 10.0f;
+	float Damage = 10.0f;
 
+	//Cooldown
 	//The time at which the weapon will finish cooling down and be able to fire again.
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon Stats")
-	float CooldownTime = 0.0f;
+	float CooldownRemaining = 0.0f;
 
-	//How long it will take for the weapon to cool down. 
-	//This is added to the game time to get CooldownTime whenever the weapon is fired.
+	//How much cooldown to add to the current cooldown when the weapon fires
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon Stats")
 	float MaxCooldown = 10.0f;
+
+	//Charging
+	//For weapons that can't fire immediately like lock on missiles or miniguns, 
+	//this determines how long it takes for them to be able to fire from 0, Always 0 for weapons that can fire on demand
+	UPROPERTY(EditDefaultsOnly, Category = "Weapon Stats")
+	float MinChargeToFire = 0.0f;
+
+	UPROPERTY(EditDefaultsOnly, category = "Weapon Stats")
+	float MaxCharge = 0.0f;
+
+	float CurrentCharge = 0.0f;
+
+
+	//For hitscan weapons, this is how far they fire in world units
+	//For projectile weapons, this is how fast the projectile moves
+	UPROPERTY(EditDefaultsOnly, Category = "Weapon Stats")
+	float Speed = 500000.0f;
+
+	//How far the camera trace goes. For hitscan weapons this will be the same as Speed
+	//But projectile weapons will generally have much lower speeds, which wouldn't be useable for TraceCamera
+	UPROPERTY(EditDefaultsOnly, Category = "Weapon Stats")
+	float TraceDistance = Speed;
 
 	//Weapons rotate to fire at their target
 	//This limits how far they are allowed to rotate
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon Stats")
-	FRotator MaxRotation = FRotator(15.0f, 90.0f, 0.0f);
+	FRotator MaxRotation = FRotator(15.0f, 90.0f, 15.0f);
 
-	//For hitscan weapons, this is how far they fire in world units
-	//For projectile weapons, this is how fast the projectile moves
-	float Speed = 10000.0f;
 
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon Type")
 	WeaponType WType;
 
+	UPROPERTY(EditDefaultsOnly, Category = "Visuals and Sounds")
+	TWeakObjectPtr<UParticleSystem> MuzzleParticle;
+	
+	//UPROPERTY(EditDefaultsOnly, Category = "Visuals and Sounds")
+	TWeakObjectPtr<UAudioComponent> FireSoundComponent;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Visuals and Sounds")
+	USoundBase* FireSound;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Visuals and Sounds")
+	FVector MuzzleParticleScale;
+
+	//Actor hit by CameraTrace, used to determine where to point the weapon
+	TWeakObjectPtr<AActor> HitActor;
+
+	//Location where the camera trace hit or, if no hit occured, the end of the trace
+	FVector HitLocation;
 };
