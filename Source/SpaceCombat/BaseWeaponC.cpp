@@ -49,7 +49,12 @@ void ABaseWeaponC::Tick( float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	UpdateCooldown(DeltaTime);
-	UpdateCharge(-DeltaTime);
+
+	//Only lower the charge if
+	if(!bIsCharging)
+		UpdateCharge(-DeltaTime);
+
+	bIsCharging = false;
 }
 
 void ABaseWeaponC::Init(){
@@ -82,7 +87,8 @@ void ABaseWeaponC::Fire()
 
 void ABaseWeaponC::TryFire()
 {
-	UpdateCharge(GetWorld()->GetDeltaSeconds);
+	bIsCharging = true;
+	UpdateCharge(GetWorld()->GetDeltaSeconds());
 	if (CanFire())
 	{
 		Fire();

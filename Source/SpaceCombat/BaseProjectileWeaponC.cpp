@@ -20,8 +20,11 @@ void ABaseProjectileWeaponC::Fire()
 		//DrawDebugSphere(GetWorld(), Location, 3, 8, FColorList::Red, false, 2, 1, 5);
 		
 		ABaseProjectileC* a = GetWorld()->SpawnActor<ABaseProjectileC>(Cast<UClass>(*Projectile), Location, Rotation);
-		a->SetOwner(GetOwner());
-		//a->SetActorScale3D({100, 100, 100});
+		if (a)
+		{
+			a->SetOwner(GetOwner());
+		}
+			//a->SetActorScale3D({100, 100, 100});
 		//print(a->GetName());
 		//	RootMesh->GetSocketLocation(FName("Barrel")),
 			//FRotator(),

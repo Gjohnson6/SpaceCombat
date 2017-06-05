@@ -80,11 +80,13 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon Stats")
 	float MinChargeToFire = 0.0f;
 
-	UPROPERTY(EditDefaultsOnly, category = "Weapon Stats")
+	UPROPERTY(EditDefaultsOnly, Category = "Weapon Stats")
 	float MaxCharge = 0.0f;
 
+	UPROPERTY(BlueprintReadWrite, Category = "Weapon Stats")
 	float CurrentCharge = 0.0f;
 
+	bool bIsCharging = false;
 
 	//For hitscan weapons, this is how far they fire in world units
 	//For projectile weapons, this is how fast the projectile moves
