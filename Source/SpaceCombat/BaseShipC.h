@@ -26,33 +26,15 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(UInputComponent* InputComponent) override;
 
-	//Passes the input axis for moving forwards and backwards to the pawn controller
-	void MoveForward(float AxisValue);
+	UMovementComponent* GetMovementComponent();
 
-	//Passes the input axis for moving up and down to the pawn controller
-	void MoveUp(float AxisValue);
+	UFUNCTION(BlueprintCallable , Category = "Getters")
+	void SetMaxSpeed(float speed);
 
-	//Passes the input axis for moving right and left to the pawn controller.
-	void MoveRight(float AxisValue);
+	UFUNCTION(BlueprintPure, Category = "Getters")
+	FVector2D GetCrosshairOffset();
 
-	//Roll ship based on AxisValue. >0 rolls right, <0 rolls left
-	void RollRight(float AxisValue);
-
-	//Adjust ship's pitch based on AxisValue, >0 rolls up <0 rolls down
-	void Pitch(float AxisValue);
-
-	//Adjust ship's yaw based on AxisValue, >0 turns right, <0 turns left
-	void Yaw(float AxisValue);
-
-	template <WeaponType WepType, bool IsPressed>
-	void WeaponTypePressed();
-
-	//Handle Afterburner input
-	void AfterburnerPressed();
-	void AfterburnerReleased();
-
-	void AddToIgnoreArray(AActor* actorToAdd);
-	void RemoveFromIgnoreArray(AActor* actorToRemove);
+	FVector2D GetCrosshairPosition();
 
 	//Handle taking damage
 	virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
@@ -99,4 +81,58 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, Category = "Particles & Sounds")
 	TWeakObjectPtr<USoundBase> ExplosionSound;
+
+
+	FVector2D CrosshairOffset;
+
+private:
+
+	template <WeaponType WepType, bool IsPressed>
+	void WeaponTypePressed();
+
+	void AddToIgnoreArray(AActor* actorToAdd);
+	void RemoveFromIgnoreArray(AActor* actorToRemove);
+
+	//Passes the input axis for moving forwards and backwards to the pawn controller
+	void MoveForward(float AxisValue);
+
+	//Passes the input axis for moving up and down to the pawn controller
+	void MoveUp(float AxisValue);
+
+	//Passes the input axis for moving right and left to the pawn controller.
+	void MoveRight(float AxisValue);
+
+	//Roll ship based on AxisValue. >0 rolls right, <0 rolls left
+	void RollRight(float AxisValue);
+
+	//Adjust ship's pitch based on AxisValue, >0 rolls up <0 rolls down
+	void Pitch(float AxisValue);
+
+	//Adjust ship's yaw based on AxisValue, >0 turns right, <0 turns left
+	void Yaw(float AxisValue);
+
+	void BrakePressed();
+	void BrakeReleased();
+
+	//Handle Afterburner input
+	void AfterburnerPressed();
+	void AfterburnerReleased();
+
+	//Handle free turn held
+	void FreeTurnPressed();
+	void FreeTurnReleased();
+
+	//Radius the crosshair is allowed to move
+	float CrosshairRange = 150.0f;
+	
+	float OffsetDist = 0.0f;
+
+	//The closest point to the given offset while still being within crosshair range
+	void ClampToCrosshairRange(FVector2D& Offset);
+	
+	float GetOffsetDist(FVector2D& Offset);
+
+	bool bFreeTurnHeld = false;
+
+	float Scalar = 0.0f;
 };

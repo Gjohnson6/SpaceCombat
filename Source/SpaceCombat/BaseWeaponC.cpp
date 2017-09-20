@@ -24,16 +24,14 @@ ABaseWeaponC::ABaseWeaponC()
 	MuzzleParticle = MuzzleParticleOb.Object;
 	FireSound = FireSoundOb.Object;
 	RootComponent = RootMesh;
-	Init();
 	if (FireSoundComponent->IsValidLowLevel())
 	{
 		FireSoundComponent->bAutoActivate = false;
 		//FireSoundComponent->AttachToComponent(RootComponent, FAttachmentTransformRules::KeepRelativeTransform, FName("Barrel"));
 		FireSoundComponent->AttachTo(RootComponent, FName("Barrel"));
 		FireSoundComponent->SetSound(FireSound);
-		FireSoundComponent->Activate();
+		//FireSoundComponent->Activate();
 	}
-	Init();
 }
 
 // Called when the game starts
@@ -49,12 +47,16 @@ void ABaseWeaponC::Tick( float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 	UpdateCooldown(DeltaTime);
-
-	//Only lower the charge if
-	if(!bIsCharging)
+	
+	//If the weapon is trying to be fired, and is tryng to be charged, try firing
+	if (bFireHeld && CooldownOk())
+	{
+		TryFire();
+	}
+	else
+	{
 		UpdateCharge(-DeltaTime);
-
-	bIsCharging = false;
+	}
 }
 
 void ABaseWeaponC::Init(){
@@ -87,9 +89,8 @@ void ABaseWeaponC::Fire()
 
 void ABaseWeaponC::TryFire()
 {
-	bIsCharging = true;
 	UpdateCharge(GetWorld()->GetDeltaSeconds());
-	if (CanFire())
+	if (ChargEOk())
 	{
 		Fire();
 	}
@@ -98,7 +99,17 @@ void ABaseWeaponC::TryFire()
 //Whether the weapon can fire
 bool ABaseWeaponC::CanFire()
 {
-	return CooldownRemaining <= 0.0f && CurrentCharge > MinChargeToFire;
+	return CooldownOk() && ChargEOk();
+}
+
+bool ABaseWeaponC::CooldownOk()
+{
+	return CooldownRemaining <= 0.0f;
+}
+
+bool ABaseWeaponC::ChargEOk()
+{
+	return CurrentCharge >= MinChargeToFire;
 }
 
 //Sets the time when the weapon will finish cooling down
@@ -110,6 +121,10 @@ void ABaseWeaponC::UpdateCooldown(float DeltaTime)
 void ABaseWeaponC::UpdateCharge(float DeltaTime)
 {
 	CurrentCharge = FMath::Clamp(CurrentCharge + DeltaTime, 0.0f, MaxCharge);
+
+	//Once the charge falls back to 0, the weapon can begin charging up again.
+	if (CurrentCharge <= 0.0f)
+		bCanCharge = true;
 }
 
 void ABaseWeaponC::SetCooldownToMax()
@@ -134,19 +149,29 @@ bool ABaseWeaponC::TraceCamera()
 		//GetWorld()->DebugDrawTraceTag = TraceTag;
 
 		FCollisionQueryParams CollisionParams;
-		//CollisionParams.TraceTag = TraceTag;
-		HitSuccess = GetWorld()->LineTraceSingleByChannel(
-			HitResult, 
-			CameraLoc, 
-			CameraLoc + (ForwardVector * TraceDistance), 
-			ECC_TargetTrace,
-			CollisionParams
-		);
+		CollisionParams.TraceTag = TraceTag;
+		CollisionParams.AddIgnoredActor(GetOwner());
+		//HitSuccess = GetWorld()->LineTraceSingleByChannel(
+		//	HitResult, 
+		//	CameraLoc, 
+		//	CameraLoc + (ForwardVector * TraceDistance), 
+		//	ECC_TargetTrace,
+		//	CollisionParams
+		//);
 
 		//If the trace hit an object, set HitLocation to the location where the hit occured, otherwise set it to the end of the trace
+
+
+		auto ship = Cast<ABaseShipC>(GetOwner());
+		if (ship->GetController()->IsPlayerController())
+		{
+			auto playerControl = Cast<APlayerController>(ship->GetController());
+			HitSuccess = playerControl->GetHitResultAtScreenPosition(ship->GetCrosshairPosition(), ECC_TargetTrace, CollisionParams, HitResult);
+		}		
 		HitLocation = HitSuccess ? HitResult.Location : HitResult.TraceEnd;
-		
+		print(HitLocation.ToString());
 		HitActor = HitResult.Actor;
+		HitComponent = HitResult.Component;
 	}
 
 	return HitSuccess;
@@ -168,6 +193,11 @@ void ABaseWeaponC::RotateWeapon()
 	//Rotate weapon mesh
 	RootMesh->SetWorldRotation(NewRot);
 
+}
+
+void ABaseWeaponC::SetFiring(bool isFiring)
+{
+	bFireHeld = isFiring;
 }
 
 WeaponType ABaseWeaponC::GetWeaponType()

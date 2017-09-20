@@ -57,4 +57,11 @@ struct FMovementVariablesStruct
 	//How long until boost can be used again
 	UPROPERTY(EditDefaultsOnly, Category = "Movement")
 	float BoostCooldown = 0.0f;
+
+
+	UPROPERTY(EditDefaultsOnly, Category = "Movement")
+	float Deceleration = 3000.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Movement")
+	float BrakingDeceleration = 10000.0f;
 };

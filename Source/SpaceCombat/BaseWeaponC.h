@@ -54,6 +54,12 @@ public:
 
 	virtual void RotateWeapon();
 
+	virtual void SetFiring(bool isFiring);
+
+	virtual bool CooldownOk();
+	
+	virtual bool ChargEOk();
+
 	WeaponType GetWeaponType();
 
 protected:
@@ -76,7 +82,7 @@ protected:
 
 	//Charging
 	//For weapons that can't fire immediately like lock on missiles or miniguns, 
-	//this determines how long it takes for them to be able to fire from 0, Always 0 for weapons that can fire on demand
+	//this determines how long it takes for them to be able to fire from 0, Always 0 for weapons that can fire instantly
 	UPROPERTY(EditDefaultsOnly, Category = "Weapon Stats")
 	float MinChargeToFire = 0.0f;
 
@@ -86,7 +92,10 @@ protected:
 	UPROPERTY(BlueprintReadWrite, Category = "Weapon Stats")
 	float CurrentCharge = 0.0f;
 
-	bool bIsCharging = false;
+	bool bFireHeld = false;
+
+	bool bCanCharge = true;
+
 
 	//For hitscan weapons, this is how far they fire in world units
 	//For projectile weapons, this is how fast the projectile moves
@@ -121,6 +130,8 @@ protected:
 
 	//Actor hit by CameraTrace, used to determine where to point the weapon
 	TWeakObjectPtr<AActor> HitActor;
+
+	TWeakObjectPtr<USceneComponent> HitComponent;
 
 	//Location where the camera trace hit or, if no hit occured, the end of the trace
 	FVector HitLocation;

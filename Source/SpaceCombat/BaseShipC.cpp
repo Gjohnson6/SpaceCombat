@@ -32,7 +32,6 @@ ABaseShipC::ABaseShipC()
 void ABaseShipC::BeginPlay()
 {
 	Super::BeginPlay();
-
 	//When spawned, equip the weapon that corresponsd to each socket in WeaponLoadout
 	for(FName SocketName : RootComponent->GetAllSocketNames())
 	{
@@ -56,111 +55,196 @@ void ABaseShipC::BeginPlay()
 void ABaseShipC::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
-	
-	if(GetWorld())
-	for(ABaseWeaponC* CurrWep : EquippedWeapons)
-	{
-		if(CurrWep->IsValidLowLevel())
-		{
-			if(WeaponTypeFiringMap[CurrWep->GetWeaponType()])
-			{
-				CurrWep->TryFire();
-			}
-			//print(CurrWep->GetActorLocation().ToString());
-		}
-	}
+	Scalar = DeltaTime / .16f;
+	float dist = GetOffsetDist(CrosshairOffset);
 
+	if (!bFreeTurnHeld)
+	{
+		AddActorLocalRotation(FRotator(0, (CrosshairOffset.X / 5) * Scalar, 0));
+		AddActorLocalRotation(FRotator((-CrosshairOffset.Y / 5) * Scalar, 0, 0));
+	}
 }
 
 // Called to bind functionality to input
-void ABaseShipC::SetupPlayerInputComponent(UInputComponent* InputComponent)
+void ABaseShipC::SetupPlayerInputComponent(UInputComponent* uInputComponent)
 {
-	APawn::SetupPlayerInputComponent(InputComponent);
-	check(InputComponent);
+	APawn::SetupPlayerInputComponent(uInputComponent);
+	check(uInputComponent);
 
 	//Configure the input component to bind the input axes to this pawn's functions
-	InputComponent->BindAxis("MoveForward", this, &ABaseShipC::MoveForward);
-	InputComponent->BindAxis("MoveUp", this, &ABaseShipC::MoveUp);
-	InputComponent->BindAxis("MoveRight", this, &ABaseShipC::MoveRight);
-	InputComponent->BindAxis("Pitch", this, &ABaseShipC::Pitch);
-	InputComponent->BindAxis("Yaw", this, &ABaseShipC::Yaw);
-	InputComponent->BindAxis("Roll", this, &ABaseShipC::RollRight);
+	uInputComponent->BindAxis("MoveForward", this, &ABaseShipC::MoveForward);
+	uInputComponent->BindAxis("MoveUp", this, &ABaseShipC::MoveUp);
+	uInputComponent->BindAxis("MoveRight", this, &ABaseShipC::MoveRight);
+	uInputComponent->BindAxis("Pitch", this, &ABaseShipC::Pitch);
+	uInputComponent->BindAxis("Yaw", this, &ABaseShipC::Yaw);
+	uInputComponent->BindAxis("Roll", this, &ABaseShipC::RollRight);
 
 	//Bind action mappings to this pawn's functions
-	InputComponent->BindAction("Fire", IE_Pressed, this, &ABaseShipC::WeaponTypePressed<WeaponType::PrimaryWeapon, true>);
-	InputComponent->BindAction("Fire", IE_Released, this, &ABaseShipC::WeaponTypePressed<WeaponType::PrimaryWeapon, false>);
-	InputComponent->BindAction("SecondaryFire", IE_Pressed, this, &ABaseShipC::WeaponTypePressed<WeaponType::SecondaryWeapon, true>);
-	InputComponent->BindAction("SecondaryFire", IE_Released, this, &ABaseShipC::WeaponTypePressed<WeaponType::SecondaryWeapon, false>);
-	InputComponent->BindAction("MissileFire", IE_Pressed, this, &ABaseShipC::WeaponTypePressed<WeaponType::MissileWeapon, true>);
-	InputComponent->BindAction("MissileFire", IE_Released, this, &ABaseShipC::WeaponTypePressed<WeaponType::MissileWeapon, false>);
-	InputComponent->BindAction("Afterburner", IE_Pressed, this, &ABaseShipC::AfterburnerPressed);
-	InputComponent->BindAction("Afterburner", IE_Released, this, &ABaseShipC::AfterburnerReleased);
+	uInputComponent->BindAction("Fire", IE_Pressed, this, &ABaseShipC::WeaponTypePressed<WeaponType::PrimaryWeapon, true>);
+	uInputComponent->BindAction("Fire", IE_Released, this, &ABaseShipC::WeaponTypePressed<WeaponType::PrimaryWeapon, false>);
+	uInputComponent->BindAction("SecondaryFire", IE_Pressed, this, &ABaseShipC::WeaponTypePressed<WeaponType::SecondaryWeapon, true>);
+	uInputComponent->BindAction("SecondaryFire", IE_Released, this, &ABaseShipC::WeaponTypePressed<WeaponType::SecondaryWeapon, false>);
+	uInputComponent->BindAction("MissileFire", IE_Pressed, this, &ABaseShipC::WeaponTypePressed<WeaponType::MissileWeapon, true>);
+	uInputComponent->BindAction("MissileFire", IE_Released, this, &ABaseShipC::WeaponTypePressed<WeaponType::MissileWeapon, false>);
+	uInputComponent->BindAction("Afterburner", IE_Pressed, this, &ABaseShipC::AfterburnerPressed);
+	uInputComponent->BindAction("Afterburner", IE_Released, this, &ABaseShipC::AfterburnerReleased);
+	uInputComponent->BindAction("Brake", IE_Pressed, this, &ABaseShipC::BrakePressed);
+	uInputComponent->BindAction("Brake", IE_Released, this, &ABaseShipC::BrakeReleased);
+	uInputComponent->BindAction("Free", IE_Pressed, this, &ABaseShipC::FreeTurnPressed);
+	uInputComponent->BindAction("Free", IE_Released, this, &ABaseShipC::FreeTurnReleased);
+}
+
+//UMovementComponent* ABaseShipC::GetMovementComponent()
+//{
+	//return MovementComponent;
+//}
+void ABaseShipC::SetMaxSpeed(float speed)
+{
+	MovementComponent->MaxSpeed = speed;
 }
 
 void ABaseShipC::MoveForward(float AxisValue)
 {
-	AddMovementInput(GetActorForwardVector(), AxisValue);
+	if (!bFreeTurnHeld)
+	{
+		AddMovementInput(GetActorForwardVector(), AxisValue);
+	}	
 }
 
 void ABaseShipC::MoveUp(float AxisValue)
 {
-	AddMovementInput(GetActorUpVector(), AxisValue);
+	if (!bFreeTurnHeld)
+	{
+		AddMovementInput(GetActorUpVector(), AxisValue);
+	}
 }
 
 void ABaseShipC::MoveRight(float AxisValue)
 {
-	AddMovementInput(GetActorRightVector(), AxisValue);
+	if (!bFreeTurnHeld)
+	{
+		AddMovementInput(GetActorRightVector(), AxisValue);
+	}
 }
 
 //Rotate by AxisValue multiplied by RollSpeed
 void ABaseShipC::RollRight(float AxisValue)
 {
-	if (AxisValue != 0)
+	if (AxisValue != 0.0f)
 	{
-		AddActorLocalRotation(FRotator(0, 0, AxisValue * MovementVariables.RollSpeed));
+		AddActorLocalRotation(FRotator(0, 0, AxisValue * MovementVariables.RollSpeed * Scalar));
 	}
 }
 
 void ABaseShipC::Pitch(float AxisValue)
 {
-	if (AxisValue != 0)
-	{
-		if (!MovementVariables.FreeTurn)
+	if (AxisValue != 0.0f)
+	{	
+		if (!bFreeTurnHeld)
 		{
-			FMath::Clamp(AxisValue, -MovementVariables.MaxPitchRadius, MovementVariables.MaxPitchRadius);
+			CrosshairOffset.Y -= AxisValue;
+			ClampToCrosshairRange(CrosshairOffset);
 		}
-
-		AddActorLocalRotation(FRotator(AxisValue, 0, 0));
+		else
+		{
+			AddActorLocalRotation(FRotator(AxisValue * Scalar * 10, 0.f, 0.f));
+		}
+		//AddActorLocalRotation(FRotator(AxisValue, 0, 0));
 	}
 }
 
 void ABaseShipC::Yaw(float AxisValue)
 {
-	if (AxisValue != 0)
+	if (AxisValue != 0.0f)
 	{
-		if (!MovementVariables.FreeTurn)
-		{
-			FMath::Clamp(AxisValue, -MovementVariables.MaxYawRadius, MovementVariables.MaxYawRadius);
+		if (!bFreeTurnHeld)
+		{	CrosshairOffset.X += AxisValue;
+			ClampToCrosshairRange(CrosshairOffset);			
 		}
-
-		AddActorLocalRotation(FRotator(0, AxisValue, 0));
+		else
+		{
+			AddActorLocalRotation(FRotator(0.f, AxisValue * Scalar * 10, 0.f));
+		}
+		//AddActorLocalRotation(FRotator(0, AxisValue, 0));
 	}
 }
 
-template<WeaponType WepType, bool IsPressed>
-void ABaseShipC::WeaponTypePressed()
+void ABaseShipC::BrakePressed()
 {
-	WeaponTypeFiringMap[WepType] = IsPressed;
+	MovementComponent->Deceleration = MovementVariables.BrakingDeceleration;
+}
+
+void ABaseShipC::BrakeReleased()
+{
+	MovementComponent->Deceleration = 0;
 }
 
 void ABaseShipC::AfterburnerPressed()
 {
 	AfterburnerHeld = true;
+	MovementComponent->MaxSpeed *= 2;
+	MovementComponent->Acceleration *= 2;
+
 }
 
 void ABaseShipC::AfterburnerReleased()
 {
 	AfterburnerHeld = false;
+	MovementComponent->MaxSpeed /= 2;
+	MovementComponent->Acceleration /= 2;
+}
+
+void ABaseShipC::FreeTurnPressed()
+{
+	bFreeTurnHeld = true;
+	CrosshairOffset.X = 0;
+	CrosshairOffset.Y = 0;
+	MovementComponent->Deceleration = 0;
+}
+
+void ABaseShipC::FreeTurnReleased()
+{
+	bFreeTurnHeld = false;
+	MovementComponent->Deceleration = MovementVariables.Deceleration;
+}
+template<WeaponType WepType, bool IsPressed>
+void ABaseShipC::WeaponTypePressed()
+{
+	WeaponTypeFiringMap[WepType] = IsPressed;
+
+	if (!IsPressed)
+	{
+		GetWorld();
+	}
+
+	//Set all weapons of type WepType
+	if (GetWorld())
+	{
+		for (ABaseWeaponC* CurrWep : EquippedWeapons.FilterByPredicate([](ABaseWeaponC* w) { return w->GetWeaponType() == WepType; }))
+		{
+			if (CurrWep->IsValidLowLevel())
+			{
+				CurrWep->SetFiring(IsPressed);
+			}
+		}
+	}
+}
+
+void ABaseShipC::ClampToCrosshairRange(FVector2D & Offset)
+{
+	float X = Offset.X;
+	float Y = Offset.Y;
+	float dist = GetOffsetDist(Offset);
+	if (dist > CrosshairRange)
+	{
+		Offset.X = X / dist * CrosshairRange;
+		Offset.Y = Y / dist * CrosshairRange;
+	}
+}
+
+float ABaseShipC::GetOffsetDist(FVector2D & Offset)
+{
+	return sqrt(Offset.X * Offset.X + Offset.Y * Offset.Y);
 }
 
 void ABaseShipC::AddToIgnoreArray(AActor* actorToAdd)
@@ -171,6 +255,20 @@ void ABaseShipC::AddToIgnoreArray(AActor* actorToAdd)
 void ABaseShipC::RemoveFromIgnoreArray(AActor* actorToRemove)
 {
 	ActorsToIgnore.Remove(actorToRemove);
+}
+
+FVector2D ABaseShipC::GetCrosshairOffset()
+{
+	return CrosshairOffset;
+}
+
+FVector2D ABaseShipC::GetCrosshairPosition()
+{
+	const FVector2D ViewportSize = FVector2D(GEngine->GameViewport->Viewport->GetSizeXY());
+	const FVector2D  ViewportCenter = FVector2D(ViewportSize.X / 2, ViewportSize.Y / 2);
+
+
+	return FVector2D(ViewportCenter.X + CrosshairOffset.X, ViewportCenter.Y + CrosshairOffset.Y);
 }
 
 float ABaseShipC::TakeDamage(float DamageAmount, FDamageEvent const & DamageEvent, AController * EventInstigator, AActor * DamageCauser)

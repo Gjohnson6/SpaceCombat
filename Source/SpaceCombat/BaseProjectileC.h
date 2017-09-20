@@ -14,7 +14,7 @@ public:
 	// Sets default values for this actor's properties
 	ABaseProjectileC();
 
-	ABaseProjectileC(float Damage, float Health, float Speed);
+	ABaseProjectileC(float Damage, float Health, float Speed, bool bIsHoming, USceneComponent* TargetComponent);
 
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -24,6 +24,16 @@ public:
 
 	UFUNCTION()
 	void OnHit(UPrimitiveComponent* HitComponent, AActor* OtherActor, UPrimitiveComponent* OtherComponent, FVector NormalImpulse, const FHitResult& Hit);
+
+	void SetDamage(float& DamageVal);
+
+	void SetHealth(float& HealthVal);
+	
+	void SetSpeed(float& SpeedVal);
+	
+	void SetIsHoming(bool IsHoming);
+
+	void SetHomingTarget(USceneComponent* TargetComponent);
 	
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Base Mesh")
@@ -39,6 +49,10 @@ protected:
 
 	float Speed = 10000.0f;
 
+	bool bIsHoming = false;
+
+	USceneComponent* Target = nullptr;
+	
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Visuals and Sounds")
 	TWeakObjectPtr<UParticleSystem> TrailParticle;
 
@@ -58,4 +72,6 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Visuals and Sounds")
 	FVector ImpactParticleScale;
+
+	
 };
